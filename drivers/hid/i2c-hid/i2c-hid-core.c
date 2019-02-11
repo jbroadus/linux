@@ -51,6 +51,7 @@
 #define I2C_HID_QUIRK_NO_RUNTIME_PM		BIT(2)
 #define I2C_HID_QUIRK_DELAY_AFTER_SLEEP		BIT(3)
 #define I2C_HID_QUIRK_BOGUS_IRQ			BIT(4)
+#define I2C_HID_QUIRK_RESET_AFTER_RESUME	BIT(5)
 
 /* flags */
 #define I2C_HID_STARTED		0
@@ -183,7 +184,7 @@ static const struct i2c_hid_quirks {
 	{ I2C_VENDOR_ID_GOODIX, I2C_DEVICE_ID_GOODIX_01F0,
 		I2C_HID_QUIRK_NO_RUNTIME_PM },
 	{ USB_VENDOR_ID_ELAN, HID_ANY_ID,
-		 I2C_HID_QUIRK_BOGUS_IRQ },
+		 I2C_HID_QUIRK_BOGUS_IRQ | I2C_HID_QUIRK_RESET_AFTER_RESUME },
 	{ 0, 0 }
 };
 
@@ -1288,12 +1289,17 @@ static int i2c_hid_resume(struct device *dev)
 
 	enable_irq(client->irq);
 
-	/* Instead of resetting device, simply powers the device on. This
-	 * solves "incomplete reports" on Raydium devices 2386:3118 and
-	 * 2386:4B33 and fixes various SIS touchscreens no longer sending
-	 * data after a suspend/resume.
-	 */
-	ret = i2c_hid_set_power(client, I2C_HID_PWR_ON);
+	if (ihid->quirks & I2C_HID_QUIRK_RESET_AFTER_RESUME) {
+		ret = i2c_hid_hwreset(client);
+	} else {
+		/* Instead of resetting device, simply powers the device on.
+		 * This solves "incomplete reports" on Raydium devices 2386:3118
+		 * and 2386:4B33 and fixes various SIS touchscreens no longer
+		 * sending data after a suspend/resume.
+		 */
+		ret = i2c_hid_set_power(client, I2C_HID_PWR_ON);
+	}
+
 	if (ret)
 		return ret;
 
