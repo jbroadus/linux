@@ -172,7 +172,7 @@ static const struct i2c_hid_quirks {
 	{ I2C_VENDOR_ID_RAYDIUM, I2C_PRODUCT_ID_RAYDIUM_3118,
 		I2C_HID_QUIRK_NO_IRQ_AFTER_RESET },
 	{ USB_VENDOR_ID_ELAN, HID_ANY_ID,
-		 I2C_HID_QUIRK_BOGUS_IRQ },
+		 I2C_HID_QUIRK_BOGUS_IRQ | I2C_HID_QUIRK_RESET_ON_RESUME},
 	{ USB_VENDOR_ID_ALPS_JP, HID_ANY_ID,
 		 I2C_HID_QUIRK_RESET_ON_RESUME },
 	{ I2C_VENDOR_ID_SYNAPTICS, I2C_PRODUCT_ID_SYNAPTICS_SYNA2393,
@@ -203,7 +203,7 @@ static u32 i2c_hid_lookup_quirk(const u16 idVendor, const u16 idProduct)
 		if (i2c_hid_quirks[n].idVendor == idVendor &&
 		    (i2c_hid_quirks[n].idProduct == (__u16)HID_ANY_ID ||
 		     i2c_hid_quirks[n].idProduct == idProduct))
-			quirks = i2c_hid_quirks[n].quirks;
+			quirks |= i2c_hid_quirks[n].quirks;
 
 	return quirks;
 }
