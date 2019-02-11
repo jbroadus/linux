@@ -182,7 +182,9 @@ static const struct i2c_hid_quirks {
 	 */
 	{ USB_VENDOR_ID_ELAN, HID_ANY_ID,
 		 I2C_HID_QUIRK_NO_WAKEUP_AFTER_RESET |
-		 I2C_HID_QUIRK_BOGUS_IRQ },
+		 I2C_HID_QUIRK_BOGUS_IRQ |
+		 I2C_HID_QUIRK_RESET_ON_RESUME
+	},
 	{ 0, 0 }
 };
 
@@ -202,7 +204,7 @@ static u32 i2c_hid_lookup_quirk(const u16 idVendor, const u16 idProduct)
 		if (i2c_hid_quirks[n].idVendor == idVendor &&
 		    (i2c_hid_quirks[n].idProduct == (__u16)HID_ANY_ID ||
 		     i2c_hid_quirks[n].idProduct == idProduct))
-			quirks = i2c_hid_quirks[n].quirks;
+			quirks |= i2c_hid_quirks[n].quirks;
 
 	return quirks;
 }
