@@ -147,7 +147,7 @@ static int wait_startup(struct tpm_chip *chip, int l)
 	return -1;
 }
 
-static bool check_locality(struct tpm_chip *chip, int l)
+static bool check_locality(struct tpm_chip *chip, int l, u8 *result)
 {
 	struct tpm_tis_data *priv = dev_get_drvdata(&chip->dev);
 	int rc;
@@ -156,6 +156,10 @@ static bool check_locality(struct tpm_chip *chip, int l)
 	rc = tpm_tis_read8(priv, TPM_ACCESS(l), &access);
 	if (rc < 0)
 		return false;
+
+	if (result != NULL) {
+		*result = access;
+	}
 
 	if ((access & (TPM_ACCESS_ACTIVE_LOCALITY | TPM_ACCESS_VALID
 		       | TPM_ACCESS_REQUEST_USE)) ==
@@ -193,7 +197,7 @@ static int __tpm_tis_request_locality(struct tpm_chip *chip, int l)
 	unsigned long stop, timeout;
 	long rc;
 
-	if (check_locality(chip, l))
+	if (check_locality(chip, l, NULL))
 		return l;
 
 	rc = tpm_tis_write8(priv, TPM_ACCESS(l), TPM_ACCESS_REQUEST_USE);
@@ -209,7 +213,7 @@ again:
 			return -1;
 		rc = wait_event_interruptible_timeout(priv->int_queue,
 						      (check_locality
-						       (chip, l)),
+						      (chip, l, NULL)),
 						      timeout);
 		if (rc > 0)
 			return l;
@@ -219,9 +223,18 @@ again:
 		}
 	} else {
 		/* wait for burstcount */
+		u8 result;
 		do {
-			if (check_locality(chip, l))
+			if (check_locality(chip, l, &result))
 				return l;
+			if ((result & TPM_ACCESS_REQUEST_USE) == 0) {
+				dev_dbg(&chip->dev,
+					"Request was unexpectedly cancelled.");
+				rc = tpm_tis_write8(priv, TPM_ACCESS(l),
+						TPM_ACCESS_REQUEST_USE);
+				if (rc < 0)
+					return rc;
+			}
 			tpm_msleep(TPM_TIMEOUT);
 		} while (time_before(jiffies, stop));
 	}
